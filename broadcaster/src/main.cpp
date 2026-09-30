@@ -48,6 +48,8 @@ static void print_usage(const char *prog)
 int main(int argc, char *argv[])
 {
     // ---- 手动扫描参数（不依赖 Qt，便于先决定用哪个 Application 类）----
+    // 先用纯 C 的 strcmp 把参数扫一遍，再决定走 GUI 还是 CLI：
+    // GUI 用 QApplication（带窗口事件循环），CLI 用 QCoreApplication（无界面）。
     std::string source = "0";       // 采集源：默认摄像头
     std::string output = "out.mp4"; // 输出文件（CLI 模式）
     int duration_sec = 0;           // 运行秒数：0 = 不限时

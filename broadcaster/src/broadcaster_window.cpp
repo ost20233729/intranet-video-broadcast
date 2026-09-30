@@ -74,6 +74,9 @@ void BroadcasterWindow::closeEvent(QCloseEvent *event)
     event->accept();
 }
 
+// toggleStream 的功能：开始/停止推流。
+// 开始：优先摄像头，打不开就回退测试图；起工作线程跑 engine->run()。
+// 停止：置停止标志 → 等线程退出（join）→ 销毁引擎。
 void BroadcasterWindow::toggleStream()
 {
     if (running_)
@@ -91,6 +94,8 @@ void BroadcasterWindow::toggleStream()
     // 采集源策略：优先摄像头（/dev/video0），打开失败自动回退测试画面，
     // 保证无摄像头环境也能一键演示整条链路。编码/网络参数全部取自
     // common/params.h，改一处两端同步生效。
+    // 注意：GUI 和 CLI 用的是同一个 VideoEngine（引擎与界面分离）——
+    // 界面只是"按钮 -> new 引擎 -> 起线程跑 run()"，不含一行编码逻辑。
     const std::string url = std::string("rtp://") + std::string(vb::kDefaultMulticastAddress) +
                             ":" + std::to_string(vb::kUdpPort);
     auto *engine = new VideoEngine("0", url, 0); // 优先摄像头
@@ -119,6 +124,8 @@ void BroadcasterWindow::toggleStream()
         engine->run(); // 阻塞：按 30fps 节奏采集-编码-推流，直至停止/出错
         running_ = false;
         // 回主线程复位界面（线程自然结束时由 stop 标志/源结束触发）
+        // invokeMethod + QueuedConnection = 把"复位界面"投递回主线程执行：
+        // Qt 规定 UI 对象只能在主线程碰，工作线程直接改按钮是未定义行为。
         QMetaObject::invokeMethod(this,
                                   [this] {
                                       if (worker_.joinable())
